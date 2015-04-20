@@ -1,0 +1,138 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cybernetic Cititzen</title>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=visualization&sensor=true_or_false"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0px;
+            padding: 0px
+        }
+    </style>
+
+    <body>
+
+        <div id="map"></div>
+
+    </body>
+
+    <script>
+
+        $( document ).ready(function() {
+            getData();
+        });
+
+        var map;
+        var markers = new L.layerGroup()
+        var circle;
+        var added = [];
+
+        var map = L.map('map').setView([50.3714, -4.1422], 13);
+
+        L.tileLayer('http://{s}.tiles.mapbox.com/v4/examples.map-0l53fhk2/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibHdvdHRvbiIsImEiOiJPcGZrZWZrIn0.py3WFLOdqJNuvC9xraUvvg', {
+            maxZoom: 18
+        }).addTo(map);
+
+        function getData(){
+         $.ajax({
+
+            type: "get",
+
+            url: "http://46.101.40.61/cybernetic/mine/",
+
+            success: function(objects){
+
+                var json = JSON.parse(objects.content[0])
+                for(var i = 0;i<Object.keys(json).length;i++){
+                    
+                    var lat = json[i].fields.latitude
+                    var lon = json[i].fields.longitude
+                    var weight = json[i].fields.weight;
+                    var setColor;
+                    var latlong = lat+','+lon
+                    if(json[i].fields.weight >= 0.5){
+                        setColor = "#FF6666"
+                    }else{
+                        setColor = "#009933"
+                    }                    
+                    circle = L.circleMarker([lat,lon],{color: setColor,radius:20})
+                    
+                    added.push(latlong)
+
+                    markers.addLayer(circle)
+                    markers.addTo(map) 
+                    
+                }
+
+                
+                
+            }  
+        })
+     }
+
+        function refreshData(){
+         $.ajax({
+
+            type: "get",
+
+            url: "http://46.101.40.61/cybernetic/mine/",
+
+            success: function(objects){
+
+                //console.log(objects)]
+                var json = JSON.parse(objects.content[0])
+                for(var i = 0;i<Object.keys(json).length;i++){
+                    
+                    var lat = json[i].fields.latitude
+                    var lon = json[i].fields.longitude
+                    var setColor;
+                    var latlong = lat+','+lon
+
+                    if(json[i].fields.weight >= 0.5){
+                        setColor = "#FF6666"
+                    }else{
+                        setColor = "#009933"
+                    }
+
+                    //specifically for debugging
+                    //console.log(added)
+                    //console.log(added.indexOf(latlong))
+                    
+                    //checks array named added to make sure location hasn't previously been entered.
+
+                    if(added.indexOf(latlong)==-1){
+                        console.log('New location shown')
+                        circle = L.circleMarker([lat,lon],{color: setColor,radius:20})
+                        markers.addLayer(circle)
+                        added.push(latlong)
+                    }else{
+                        console.log('All data up-to-date')
+                    }
+                    
+                }
+                
+            }  
+        })
+     }
+
+
+
+    setInterval(function(){refreshData()},  5000);
+
+</script>
+
+</head>
+</html>
+
+
+
