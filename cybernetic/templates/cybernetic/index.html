@@ -2,107 +2,242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cybernetic Cititzen</title>
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
-    <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cybernetic Cititzen</title>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+  <link rel="stylesheet" href="http://www.lukewotton.com/cdn/buttons.css" />
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+  <script src="http://www.lukewotton.com/cdn/mqtt.js"></script>
+  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=visualization&sensor=true_or_false"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/3.11.0/vis.min.js"></script>
+  <link rel="stylesheet" href="http://code.ionicframework.com/ionicons/1.5.2/css/ionicons.min.css" />
 
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=visualization&sensor=true_or_false"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0px;
+      padding: 0px;
+      background-color:#000000;
+    }
+    #map {
+      height:80%;
+      width:80%;
+    }
+    #nodes {
+      height:80%;
+      width:20%;
+      float:right;
+      background-color:#000000;
+      margin: 0px;
+      padding: 0px;
+    }
+    #button {
+      margin-left: 35%;
+      float:middle;
+      padding:10px; 
+      height:15px;
 
-    <style>
-        html, body, #map {
-            height: 100%;
-            margin: 0px;
-            padding: 0px
+    }
+  </style>
+
+  <body>
+    <div id="nodes"></div>
+    <div id="map"></div>
+    <audio id="music" src="http://www.lukewotton.com/cdn/alpha.ogg"></audio>
+    <div id="button"><a href="#" onclick="buttonPress()" class="button button-circle button-flat">CONNECT</a></div>
+  </body>
+
+  <script>
+    var isPlaying;
+
+    var nodes = null;
+    var edges = null;
+    var network = null;
+    nodes = [];
+    edges = [];
+    var connectionCount = [];
+    var nodeid = 0;
+    var nodelabel = 0;
+
+    $( document ).ready(function() {
+      getData();
+    });
+
+    function buttonPress() {
+      console.log("pressed");
+
+      //active.bindPopup("<b>You pressed.</b><br>Your actions are felt</b>").openPopup();
+      if(isPlaying == false){
+        play();
+        console.log('play');
+        var ranLat = (Math.random() * (50.363169 - 50.382658) + 50.382658).toFixed(6);
+        //console.log(ranLat);
+        var ranLon = (Math.random() * (-4.127898 - -4.162059) + -4.162059).toFixed(6);
+        //console.log(ranLon);  
+        var randomMarker = L.marker([ranLat,ranLon]).addTo(map);
+        randomMarker.bindPopup("<b>You're acting here.</b>").openPopup();
+        user = L.circleMarker([ranLat,ranLon],{color:"#009933",radius:20}).addTo(map);
+        
+        var nodeCount = 1;
+        for (var i = 0; i < nodeCount; i++) {
+          nodes.push({
+            id: nodeid,
+            label: String(nodelabel)
+          });
+
+          connectionCount[nodeid] = 0;
+          nodeid++;
+          nodelabel++;
+
+        // create edges in a scale-free-network way
+        if (nodeid == 1) {
+          var from = nodeid;
+          var to = 0;
+          edges.push({
+            from: from,
+            to: to
+          });
+          connectionCount[from]++;
+          connectionCount[to]++;
         }
-    </style>
+        else if (nodeid > 1) {
+          var conn = edges.length * 1;
+          var rand = Math.floor(Math.random() * conn);
+          var cum = 1;
+          var j = 0;
+          while (j < connectionCount.length && cum < rand) {
+            cum += connectionCount[j];
+            j++;
+          }
 
-    <body>
 
-        <div id="map"></div>
+          var from = nodeid;
+          console.log(j);
+          var to = j;
+          edges.push({
+            from: from,
+            to: to
+          });
+          connectionCount[from]++;
+          connectionCount[to]++;
+        }
+    }
+      // create a network
+      var container = document.getElementById('nodes');
+      var data = {
+        nodes: nodes,
+        edges: edges
+      };
+      var options = {
 
-    </body>
+        stabilize:false,
 
-    <script>
+        physics: {
+          barnesHut: {
+            gravitationalConstant: -3325, 
+            centralGravity: 3.05, 
+            springLength: 411
+          }},
+          edges : {
+            color:'#bdbdbd',
+            style:'line',
+            inheritColor:false,
+            width: 7,
 
-        $( document ).ready(function() {
-            getData();
-        });
+          },
+          nodes: {
+            color:'#ffffff',
+            shape:'dot',
+            fontSize:0,
+            radius: 15,
+          }}
 
-        var map;
-        var markers = new L.layerGroup()
-        var circle;
-        var added = [];
+          network = new vis.Network(container, data, options);
+        }else{
+          pause();
+          console.log('pause');
+          active.bindPopup("<b>If you want to act, press the button.</b>").openPopup();
+        }
 
-        var map = L.map('map').setView([50.3714, -4.1422], 13);
+      }
 
-        L.tileLayer('http://{s}.tiles.mapbox.com/v4/examples.map-0l53fhk2/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibHdvdHRvbiIsImEiOiJPcGZrZWZrIn0.py3WFLOdqJNuvC9xraUvvg', {
-            maxZoom: 18
-        }).addTo(map);
+      var map;
+      var markers = new L.layerGroup()
+      var circle;
+      var added = [];
 
-        function getData(){
-         $.ajax({
+      var map = L.map('map').setView([50.3714, -4.1422], 13);
 
-            type: "get",
+      L.tileLayer('http://{s}.tiles.mapbox.com/v4/examples.map-0l53fhk2/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibHdvdHRvbiIsImEiOiJPcGZrZWZrIn0.py3WFLOdqJNuvC9xraUvvg', {
+        maxZoom: 18
+      }).addTo(map);
 
-            url: "http://46.101.40.61/cybernetic/mine/",
+      var active = L.marker([50.374056, -4.138838]).addTo(map);
+      active.bindPopup("<b>If you want to act,<br>press the button.</b>").openPopup();
 
-            success: function(objects){
+      function getData(){
+        $.ajax({
 
-                var json = JSON.parse(objects.content[0])
-                for(var i = 0;i<Object.keys(json).length;i++){
-                    
-                    var lat = json[i].fields.latitude
-                    var lon = json[i].fields.longitude
-                    var weight = json[i].fields.weight;
-                    var setColor;
-                    var latlong = lat+','+lon
-                    if(json[i].fields.weight >= 0.5){
-                        setColor = "#FF6666"
-                    }else{
-                        setColor = "#009933"
-                    }                    
-                    circle = L.circleMarker([lat,lon],{color: setColor,radius:20})
-                    
-                    added.push(latlong)
+          type: "get",
 
-                    markers.addLayer(circle)
-                    markers.addTo(map) 
-                    
-                }
+          url: "http://46.101.40.61/cybernetic/mine/",
 
-                
-                
-            }  
+          success: function(objects){
+
+            var json = JSON.parse(objects.content[0])
+            for(var i = 0;i<Object.keys(json).length;i++){
+
+              var lat = json[i].fields.latitude
+              var lon = json[i].fields.longitude
+              var weight = json[i].fields.weight;
+              var setColor;
+              var latlong = lat+','+lon
+              if(json[i].fields.weight >= 0.5){
+                setColor = "#FF6666"
+              }else{
+                setColor = "#009933"
+              }                    
+              circle = L.circleMarker([lat,lon],{color: setColor,radius:20})
+
+              added.push(latlong)
+
+              markers.addLayer(circle)
+              markers.addTo(map) 
+
+            }
+
+
+
+          }  
         })
-     }
+      }
 
-        function refreshData(){
-         $.ajax({
+      function refreshData(){
+        $.ajax({
 
-            type: "get",
+          type: "get",
 
-            url: "http://46.101.40.61/cybernetic/mine/",
+          url: "http://46.101.40.61/cybernetic/mine/",
 
-            success: function(objects){
+          success: function(objects){
 
                 //console.log(objects)]
                 var json = JSON.parse(objects.content[0])
                 for(var i = 0;i<Object.keys(json).length;i++){
-                    
-                    var lat = json[i].fields.latitude
-                    var lon = json[i].fields.longitude
-                    var setColor;
-                    var latlong = lat+','+lon
 
-                    if(json[i].fields.weight >= 0.5){
-                        setColor = "#FF6666"
-                    }else{
-                        setColor = "#009933"
-                    }
+                  var lat = json[i].fields.latitude
+                  var lon = json[i].fields.longitude
+                  var setColor;
+                  var latlong = lat+','+lon
+
+                  if(json[i].fields.weight >= 0.5){
+                    setColor = "#FF6666"
+                  }else{
+                    setColor = "#009933"
+                  }
 
                     //specifically for debugging
                     //console.log(added)
@@ -111,23 +246,38 @@
                     //checks array named added to make sure location hasn't previously been entered.
 
                     if(added.indexOf(latlong)==-1){
-                        console.log('New location shown')
-                        circle = L.circleMarker([lat,lon],{color: setColor,radius:20})
-                        markers.addLayer(circle)
-                        added.push(latlong)
+                      console.log('New location shown')
+                      circle = L.circleMarker([lat,lon],{color: setColor,radius:20})
+                      markers.addLayer(circle)
+                      added.push(latlong)
                     }else{
-                        console.log('All data up-to-date')
+                        //console.log('All data up-to-date')
                     }
-                    
+
                 }
-                
+
             }  
         })
-     }
+}
 
 
+setInterval(function(){refreshData()},  5000);
 
-    setInterval(function(){refreshData()},  5000);
+function play(){
+
+  var music = document.getElementById('music');
+  music.play()
+  console.log('playing');
+  isPlaying = true;
+}
+
+function pause(){
+  var music = document.getElementById('music');
+  music.pause()
+  console.log('paused');
+  isPlaying = false;
+}
+
 
 </script>
 
